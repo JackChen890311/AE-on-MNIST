@@ -1,6 +1,7 @@
 import os
 import cv2
 import torch
+import random
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -55,7 +56,8 @@ class MyDataloader():
         self.allpaths = allpaths
 
         # K-means
-        pids_kmeans = pids_all[self.C.num_of_folder:self.C.num_of_folfer_kmeans]
+        index = random.sample(range(len(pids_all)-1), self.C.num_of_folfer_kmeans)
+        pids_kmeans = [pids_all[i] for i in index]
         self.kpaths = pids_kmeans
         
     def setup_all(self):
@@ -96,7 +98,7 @@ class MyDataloader():
 
 if __name__ == '__main__':
     dataloaders = MyDataloader()
-    dataloaders.setup()
+    dataloaders.setup_all()
 
     for x,y in dataloaders.train_loader:
         print(x.shape,len(y))

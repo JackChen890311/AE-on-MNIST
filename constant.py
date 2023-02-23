@@ -14,16 +14,16 @@ class CONSTANT():
 
         self.data_path = '../../NBA/data/res_img/'
         self.num_of_folder = 250
-        self.num_of_folfer_kmeans = 500
+        self.num_of_folfer_kmeans = 200
         self.train_portion = 0.8
         self.valid_test_portion = 0.1
         '''
-        For example, If the above numbers are 250, 500, 0.8, 0.1
+        For example, If the above numbers are 250, 200, 0.8, 0.1
         Then the indexes of used folders are:
         Train: 0 ~ 200
         Valid: 200 ~ 250
         Test: 225 ~ 250
-        K-means Clustering: 250 ~ 500
+        K-means Clustering: Randomly choose 200 folders from 632 folders
         Maximum is 632 folders
         '''
 
