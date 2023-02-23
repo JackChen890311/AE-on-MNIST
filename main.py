@@ -49,7 +49,7 @@ def reconstruction(model, test_loader, epoch, time):
         cv2.imwrite('output/%s/recon/reconstructed_%d.png'%(time,epoch),concatenated)
         return
 
-def reconstruction_multiple(model, test_loader, name, nob):
+def reconstruction_multiple(model, test_loader, time, name, nob):
     model.eval()
     cnt = 0
     images = []
@@ -63,7 +63,7 @@ def reconstruction_multiple(model, test_loader, name, nob):
         if cnt == nob:
             break
     concatenated = np.concatenate(images,axis=0)
-    cv2.imwrite('output/recon_multi/reconstructed_%s.png'%(name),concatenated)
+    cv2.imwrite('output/%s/recon_multi/reconstructed_%s.png'%(time,name),concatenated)
     return
 
 def main():
@@ -78,6 +78,7 @@ def main():
     start_time = str(time.strftime("%Y-%m-%d~%H:%M:%S", time.localtime()))
     os.mkdir('output/%s'%start_time)
     os.mkdir('output/%s/recon'%start_time)
+    os.mkdir('output/%s/recon_multi'%start_time)
     train_losses = []
     valid_losses = []
     p_cnt = 0
@@ -90,7 +91,7 @@ def main():
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
         print('Epoch = ',e, 'Train / Valid Loss = %f / %f'%(train_loss,valid_loss))
-        reconstruction(model, dataloaders.valid_loader, e, start_time)
+        # reconstruction(model, dataloaders.valid_loader, e, start_time)
         if valid_loss < best_valid_loss:
             p_cnt = 0
             torch.save(model.state_dict(), 'output/%s/model'%start_time)
@@ -100,12 +101,21 @@ def main():
                 print('Early Stopping at epoch',e)
                 break
         if e % 100 == 0:
+            reconstruction_multiple(model, dataloaders.valid_loader, start_time, 'epoch%d'%e, 30)
             print('Plotting Loss at epoch', e)
             x_axis = list(range(e))
             plt.plot(x_axis, train_losses, label='Train')
             plt.plot(x_axis, valid_losses, label='Valid')
             plt.legend()
             plt.savefig('output/%s/loss.png'%start_time)
+            plt.clf()
+
+            plt.plot(x_axis[-100:], train_losses[-100:], label='Train')
+            plt.plot(x_axis[-100:], valid_losses[-100:], label='Valid')
+            plt.legend()
+            plt.savefig('output/%s/loss_last100.png'%start_time)
+            plt.clf()
+
 
 def test(path):
     model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
@@ -114,10 +124,11 @@ def test(path):
     model.eval()
     dataloaders = MyDataloader()
     dataloaders.setup_test()
-    reconstruction_multiple(model,dataloaders.test_loader,'test_1000-2',50)
+    time = path.split('/')[1]
+    reconstruction_multiple(model, dataloaders.valid_loader, time, 'test', 30)
 
 
 if __name__ == '__main__':
     main()
-    # test('output/2023-02-15~15:17:27/model')
+    # test('output/2023-02-23~11:44:24/model')
 

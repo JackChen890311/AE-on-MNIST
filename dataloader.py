@@ -42,22 +42,19 @@ class MyDataloader():
         super().__init__()
         self.C = CONSTANT()
         data_path = self.C.data_path
+        data_path_test = self.C.data_path_test
 
         pids_all = os.listdir(data_path)
-        pids = pids_all[:self.C.num_of_folder]
-        num_folder = len(pids)
-        split1 = int(num_folder * self.C.train_portion)
-        split2 = int(num_folder * self.C.valid_test_portion)
+        pids_test = os.listdir(data_path_test)
 
         allpaths = {}
-        allpaths['train'] = pids[:split1]
-        allpaths['val'] = pids[split1:split1+split2]
-        allpaths['test'] = pids[split1+split2:]
+        allpaths['train'] = pids_all
+        allpaths['val'] = pids_test
+        allpaths['test'] = pids_test
         self.allpaths = allpaths
 
         # K-means
-        index = random.sample(range(len(pids_all)-1), self.C.num_of_folfer_kmeans)
-        pids_kmeans = [pids_all[i] for i in index]
+        pids_kmeans = pids_all
         self.kpaths = pids_kmeans
         
     def setup_all(self):
@@ -66,7 +63,7 @@ class MyDataloader():
         self.train_loader = self.loader_prepare(self.train_dataset, True)
         del self.train_dataset
 
-        self.valid_dataset = MyDataset(self.C.data_path, self.allpaths['val']+self.allpaths['test'])
+        self.valid_dataset = MyDataset(self.C.data_path, self.allpaths['val'])
         self.valid_loader = self.loader_prepare(self.valid_dataset, False)
         del self.valid_dataset
         print('Preparation Done!')
