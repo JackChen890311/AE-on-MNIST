@@ -28,11 +28,12 @@ class Kmeans():
     def reset_folder(self):
         paths = ['output/k-center','output/k-example','output/k-center-real']
         for i in paths:
-            shutil.rmtree(i)
+            if os.path.exists(i):
+                shutil.rmtree(i)
             os.mkdir(i)
 
     def setup(self):
-        path = 'output/2023-02-15~15:17:27/model3000'
+        path = 'output/2023-02-23~11:44:24/model'
         model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
         model.load_state_dict(torch.load(path))
         self.model = model.to(C.device)
@@ -150,6 +151,6 @@ if __name__ == '__main__':
     kmeans.reconstruct_cluster_center()
     kmeans.reconstruct_real_center()
     kmeans.cluster_sample(50)
-    # kmeans.tsne_plot()
-    kmeans.dump_result()
+    kmeans.tsne_plot()
+    # kmeans.dump_result()
     
