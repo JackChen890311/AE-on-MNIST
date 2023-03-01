@@ -118,8 +118,8 @@ def main():
             plt.savefig('output/%s/loss_last100.png'%start_time)
             plt.clf()
 
-            with open('output/%s/losses.pickle'%start_time, 'wb') as file:
-                pk.dump([train_losses, valid_losses, best_valid_loss], file)
+        with open('output/%s/losses.pickle'%start_time, 'wb') as file:
+            pk.dump([train_losses, valid_losses, best_valid_loss], file)
 
 def test(path):
     model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)

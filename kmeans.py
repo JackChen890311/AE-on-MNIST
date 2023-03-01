@@ -10,7 +10,7 @@ from tqdm import tqdm
 from sklearn.cluster import KMeans
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.manifold import TSNE
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 
 from model import Autoencoder
@@ -95,11 +95,17 @@ class Kmeans():
             :return: 每個聚類的medoid
             """
             medoids = []
-            D = squareform(pdist(X))
+            # D = squareform(pdist(X))
+            # for label in sorted(set(labels)):
+            #     indices = np.where(labels == label)[0]
+            #     distances = np.sum(D[indices][:, indices], axis=1)
+            #     medoid_index = indices[np.argmin(distances)]
+            #     medoids.append(medoid_index)
             for label in sorted(set(labels)):
                 indices = np.where(labels == label)[0]
-                distances = np.sum(D[indices][:, indices], axis=1)
-                medoid_index = indices[np.argmin(distances)]
+                distances = cdist(X[indices], X[indices])
+                min_distances = np.min(distances, axis=1)
+                medoid_index = indices[np.argmin(min_distances)]
                 medoids.append(medoid_index)
             return np.array(medoids)
         medoids = find_medoids(self.kmeans_vector,self.kmeans.labels_)
