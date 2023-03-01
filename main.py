@@ -4,6 +4,7 @@ import time
 import torch
 import random
 import numpy as np
+import pickle as pk
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -93,6 +94,7 @@ def main():
         reconstruction(model, dataloaders.valid_loader, e, start_time)
         if valid_loss < best_valid_loss:
             p_cnt = 0
+            best_valid_loss = valid_loss
             torch.save(model.state_dict(), 'output/%s/model'%start_time)
         else:
             p_cnt += 1
@@ -106,6 +108,16 @@ def main():
             plt.plot(x_axis, valid_losses, label='Valid')
             plt.legend()
             plt.savefig('output/%s/loss.png'%start_time)
+            plt.clf()
+
+            plt.plot(x_axis[-100:], train_losses[-100:], label='Train')
+            plt.plot(x_axis[-100:], valid_losses[-100:], label='Valid')
+            plt.legend()
+            plt.savefig('output/%s/loss_last100.png'%start_time)
+            plt.clf()
+        
+        with open('output/%s/losses.pickle'%start_time, 'wb') as file:
+            pk.dump([train_losses, valid_losses, best_valid_loss], file)
 
 def test(path):
     model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
@@ -114,7 +126,7 @@ def test(path):
     model.eval()
     dataloaders = MyDataloader()
     dataloaders.setup_test()
-    reconstruction_multiple(model,dataloaders.test_loader,'test_1000-2',50)
+    reconstruction_multiple(model,dataloaders.test_loader,path.split('/')[-2],50)
 
 
 if __name__ == '__main__':
