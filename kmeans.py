@@ -19,20 +19,14 @@ C = CONSTANT()
 
 class Kmeans():
     def __init__(self, path):
-        self.reset_folder()
-        self.setup(path)
-        self.pass_model()
-
-    def reset_folder(self):
-        paths = ['output/k-center','output/k-example','output/k-center-real']
-        for i in paths:
-            if os.path.exists(i):
-                shutil.rmtree(i)
-            os.mkdir(i)
-
-    def setup(self, path):
+        self.path = path
+        kpaths = ['/k-center','/k-example','/k-center-real']
+        for i in kpaths:
+            if os.path.exists(path+i):
+                shutil.rmtree(path+i)
+            os.mkdir(path+i)
         model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
-        model.load_state_dict(torch.load(path))
+        model.load_state_dict(torch.load(path+'/model'))
         self.model = model.to(C.device)
         self.dataloaders = MyDataloader()
         self.img_name = self.dataloaders.setup_kmeans()
@@ -72,7 +66,7 @@ class Kmeans():
         plt.plot(list(sse.keys()), list(sse.values()))
         plt.xlabel("Number of cluster")
         plt.ylabel("SSE")
-        plt.savefig('output/k-elbow.png')
+        plt.savefig(self.path+'/k-elbow.png')
 
     def reconstruct_cluster_center(self):
         # Reconstruct cluster center vector
@@ -82,7 +76,7 @@ class Kmeans():
         # print(result.shape)
         for i in range(self.K):
             reconstructed = (result.cpu().detach().numpy()[i].reshape((C.image_dim,C.image_dim)))*255
-            cv2.imwrite('output/k-center/cluster_%d.png'%i,reconstructed)
+            cv2.imwrite(self.path+'/k-center/cluster_%d.png'%i,reconstructed)
 
     def reconstruct_real_center(self):
         def find_medoids(X, labels):
@@ -102,7 +96,7 @@ class Kmeans():
         medoids = find_medoids(self.kmeans_vector,self.kmeans.labels_)
         for cnt, i in enumerate(medoids):
             frame = cv2.imread(self.img_name[i])
-            cv2.imwrite('output/k-center-real/cluster_%d.png'%cnt,frame)
+            cv2.imwrite(self.path+'/k-center-real/cluster_%d.png'%cnt,frame)
 
     def cluster_sample(self, nob):
         for i in range(self.K): # for each cluster
@@ -113,7 +107,7 @@ class Kmeans():
             for j,cnt in enumerate(indexes):
                 img = cv2.imread(self.img_name[cnt])
                 all_img[(j//10)*C.image_dim:(j//10+1)*C.image_dim,(j%10)*C.image_dim:(j%10+1)*C.image_dim,:] = img
-            cv2.imwrite('output/k-example/cluster_%d.png'%i,all_img)
+            cv2.imwrite(self.path+'/k-example/cluster_%d.png'%i,all_img)
     
     def tsne_plot(self):
         if self.K > 20:
@@ -128,7 +122,7 @@ class Kmeans():
         fig, ax = plt.subplots()
         for i in range(self.K):
             ax.scatter(tsne_vector[self.kmeans.labels_ == i, 0], tsne_vector[self.kmeans.labels_ == i, 1], label='Cluster' + str(i), color=cmap(i))
-        plt.savefig('output/k-center/cluster_tsne.png')
+        plt.savefig(self.path+'/k-center/cluster_tsne.png')
 
     def dump_result(self):
         dict_pk = {
@@ -136,17 +130,18 @@ class Kmeans():
             'centers':self.kmeans.cluster_centers_,
             'img_name': self.img_name
         }
-        with open('output/k-center/k_means.pk', 'wb') as f:
+        with open(self.path+'/k-center/k_means.pk', 'wb') as f:
             pk.dump(dict_pk,f)
 
 if __name__ == '__main__':
-    path = 'output/2023-03-30~17:27:18/model'
+    path = 'output/2023-03-30~17:27:18'
     kmeans = Kmeans(path)
+    kmeans.pass_model()
     # kmeans.elbow(range(2,40,2))
     kmeans.pass_kmeans(K = 10)
     kmeans.reconstruct_cluster_center()
     kmeans.reconstruct_real_center()
     kmeans.cluster_sample(300)
-    kmeans.tsne_plot()
+    # kmeans.tsne_plot()
     kmeans.dump_result()
     

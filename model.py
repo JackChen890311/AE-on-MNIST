@@ -35,11 +35,9 @@ class Autoencoder(nn.Module):
         x = self.decoder(x)
         return x
 
-if __name__ =='__main__':
+if __name__ == '__main__':
     from constant import CONSTANT
     C = CONSTANT()
-
-    hidden_dims = [2048, 512, 128]
     model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
     print(model)
     dummy = torch.rand((1,C.in_size))

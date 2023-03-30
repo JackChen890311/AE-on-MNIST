@@ -12,17 +12,8 @@ class CONSTANT():
         self.patience = 20
         self.device = torch.device('cuda:0')
 
-        self.data_path = 'data/training'
+        self.data_path = 'data/testing'
         self.data_path_test = 'data/testing'
-        '''
-        For example, If the above numbers are 250, 200, 0.8, 0.1
-        Then the indexes of used folders are:
-        Train: 0 ~ 200
-        Valid: 200 ~ 250
-        Test: 225 ~ 250
-        K-means Clustering: Randomly choose 200 folders from 632 folders
-        Maximum is 632 folders
-        '''
 
         self.hidden_dims = [392, 196, 98]
         self.image_dim = 28
