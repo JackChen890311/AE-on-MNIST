@@ -134,7 +134,7 @@ class Kmeans():
             pk.dump(dict_pk,f)
 
 if __name__ == '__main__':
-    path = 'output/2023-03-30~17:27:18'
+    path = 'output/2023-03-30~22:14:50'
     kmeans = Kmeans(path)
     kmeans.pass_model()
     # kmeans.elbow(range(2,40,2))
