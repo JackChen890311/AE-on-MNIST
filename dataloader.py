@@ -1,7 +1,6 @@
 import os
 import cv2
 import torch
-import random
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -11,28 +10,29 @@ from torch.utils.data import DataLoader, Dataset
 from constant import CONSTANT
 
 class MyDataset(Dataset):
-    def __init__(self, data_path, paths):
+    def __init__(self, data_path):
+        self.C = CONSTANT()
         self.data_path = data_path
-        self.paths = paths
+        self.paths = os.listdir(data_path)
         self.imgs = []
         self.transform = transforms.Compose([
             transforms.ToTensor()
         ])
-        for p in tqdm(paths):
+        for p in tqdm(self.paths):
             pics = os.listdir(os.path.join(data_path,p))
             for pic in pics:
-                img = cv2.resize(cv2.imread(os.path.join(data_path,p,pic),cv2.IMREAD_GRAYSCALE),(64,64), interpolation=cv2.INTER_NEAREST)
-                self.imgs.append([str(os.path.join(data_path,p,pic)),img])
-        self.imgs= pd.DataFrame(self.imgs, columns=['Name','Image'])
+                img = cv2.resize(cv2.imread(os.path.join(data_path,p,pic),cv2.IMREAD_GRAYSCALE),(self.C.image_dim,self.C.image_dim), interpolation=cv2.INTER_NEAREST)
+                self.imgs.append([str(os.path.join(data_path,p,pic)),p,img])
+        self.imgs= pd.DataFrame(self.imgs, columns=['Name','Label','Image'])
 
     def __len__(self):
         return len(self.imgs)
     
     def __getitem__(self, idx):
-        return torch.flatten(self.transform(self.imgs['Image'][idx])).squeeze(), self.imgs['Name'][idx]
+        return torch.flatten(self.transform(self.imgs['Image'][idx])).squeeze(), self.imgs['Label'][idx]
     
     def show_image(self, idx):
-        img = self.imgs['Image'][idx].reshape(64,64)
+        img = self.imgs['Image'][idx].reshape(self.C.image_dim,self.C.image_dim)
         plt.imshow(img)
         plt.show()
         return img
@@ -41,46 +41,28 @@ class MyDataloader():
     def __init__(self):
         super().__init__()
         self.C = CONSTANT()
-        data_path = self.C.data_path
 
-        pids_all = os.listdir(data_path)
-        pids = pids_all[:self.C.num_of_folder]
-        num_folder = len(pids)
-        split1 = int(num_folder * self.C.train_portion)
-        split2 = int(num_folder * self.C.valid_test_portion)
-
-        allpaths = {}
-        allpaths['train'] = pids[:split1]
-        allpaths['val'] = pids[split1:split1+split2]
-        allpaths['test'] = pids[split1+split2:]
-        self.allpaths = allpaths
-
-        # K-means
-        index = random.sample(range(len(pids_all)-1), self.C.num_of_folfer_kmeans)
-        pids_kmeans = [pids_all[i] for i in index]
-        self.kpaths = pids_kmeans
-        
     def setup_all(self):
         print('Loading Data...')
-        self.train_dataset = MyDataset(self.C.data_path, self.allpaths['train'])
+        self.train_dataset = MyDataset(self.C.data_path)
         self.train_loader = self.loader_prepare(self.train_dataset, True)
         del self.train_dataset
 
-        self.valid_dataset = MyDataset(self.C.data_path, self.allpaths['val']+self.allpaths['test'])
-        self.valid_loader = self.loader_prepare(self.valid_dataset, False)
+        self.valid_dataset = MyDataset(self.C.data_path)
+        self.valid_loader = self.loader_prepare(self.valid_dataset, True)
         del self.valid_dataset
         print('Preparation Done!')
     
     def setup_test(self):
         print('Loading Data...')
-        self.test_dataset = MyDataset(self.C.data_path, self.allpaths['test']) 
-        self.test_loader = self.loader_prepare(self.test_dataset, False)
+        self.test_dataset = MyDataset(self.C.data_path_test) 
+        self.test_loader = self.loader_prepare(self.test_dataset, True)
         del self.test_dataset
         print('Preparation Done!')
 
     def setup_kmeans(self):
         print('Loading Data...')
-        self.kmeans_dataset = MyDataset(self.C.data_path, self.kpaths) 
+        self.kmeans_dataset = MyDataset(self.C.data_path) 
         self.kmeans_loader = self.loader_prepare(self.kmeans_dataset, False)
         img_name = self.kmeans_dataset.imgs['Name']
         del self.kmeans_dataset

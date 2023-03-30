@@ -39,32 +39,32 @@ def valid(model, valid_loader, loss_fn):
     return total_loss/len(valid_loader)
 
 
-def reconstruction(model, test_loader, epoch, time):
+def reconstruction(model, test_loader, epoch, time, img_dim):
     model.eval()
     for x,y in test_loader:
         x = x.to(C.device)
         idx = random.randint(0,len(y)-1)
-        result = model(x).cpu().detach().numpy()[idx].reshape((64,64))
-        origin = x.cpu().detach().numpy()[idx].reshape((64,64))
+        result = model(x).cpu().detach().numpy()[idx].reshape((img_dim,img_dim))
+        origin = x.cpu().detach().numpy()[idx].reshape((img_dim,img_dim))
         concatenated = np.concatenate([origin*255,result*255,np.round(result)*255],axis=1)
         cv2.imwrite('output/%s/recon/reconstructed_%d.png'%(time,epoch),concatenated)
         return
 
-def reconstruction_multiple(model, test_loader, name, nob):
+def reconstruction_multiple(model, test_loader, time, name, nob, img_dim):
     model.eval()
     cnt = 0
     images = []
     for x,y in test_loader:
         x = x.to(C.device)
         idx = random.randint(0,len(y)-1)
-        result = model(x).cpu().detach().numpy()[idx].reshape((64,64))
-        origin = x.cpu().detach().numpy()[idx].reshape((64,64))
+        result = model(x).cpu().detach().numpy()[idx].reshape((img_dim,img_dim))
+        origin = x.cpu().detach().numpy()[idx].reshape((img_dim,img_dim))
         images.append(np.concatenate([origin*255,result*255,np.round(result)*255],axis=1))
         cnt += 1
         if cnt == nob:
             break
     concatenated = np.concatenate(images,axis=0)
-    cv2.imwrite('output/recon_multi/reconstructed_%s.png'%(name),concatenated)
+    cv2.imwrite('output/%s/recon_multi/reconstructed_%s.png'%(time,name),concatenated)
     return
 
 def main():
@@ -75,10 +75,14 @@ def main():
     loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=C.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = C.milestones, gamma = C.gamma)
+    img_dim = C.image_dim
 
     start_time = str(time.strftime("%Y-%m-%d~%H:%M:%S", time.localtime()))
+    if not os.path.exists('output'):
+        os.mkdir('output')
     os.mkdir('output/%s'%start_time)
     os.mkdir('output/%s/recon'%start_time)
+    os.mkdir('output/%s/recon_multi'%start_time)
     train_losses = []
     valid_losses = []
     p_cnt = 0
@@ -91,7 +95,9 @@ def main():
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
         print('Epoch = ',e, 'Train / Valid Loss = %f / %f'%(train_loss,valid_loss))
-        reconstruction(model, dataloaders.valid_loader, e, start_time)
+        if e % 10 == 0:
+            reconstruction(model, dataloaders.valid_loader, e, start_time, img_dim)
+
         if valid_loss < best_valid_loss:
             p_cnt = 0
             best_valid_loss = valid_loss
@@ -101,7 +107,9 @@ def main():
             if p_cnt == C.patience:
                 print('Early Stopping at epoch',e)
                 break
+        
         if e % 100 == 0:
+            reconstruction_multiple(model, dataloaders.valid_loader, start_time, 'epoch%d'%e, 30, img_dim)
             print('Plotting Loss at epoch', e)
             x_axis = list(range(e))
             plt.plot(x_axis, train_losses, label='Train')
@@ -115,9 +123,11 @@ def main():
             plt.legend()
             plt.savefig('output/%s/loss_last100.png'%start_time)
             plt.clf()
-        
+
         with open('output/%s/losses.pickle'%start_time, 'wb') as file:
             pk.dump([train_losses, valid_losses, best_valid_loss], file)
+        
+    print('Ending at epoch',e, '. Best valid loss:',best_valid_loss)
 
 def test(path):
     model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
@@ -126,10 +136,11 @@ def test(path):
     model.eval()
     dataloaders = MyDataloader()
     dataloaders.setup_test()
-    reconstruction_multiple(model,dataloaders.test_loader,path.split('/')[-2],50)
+    time = path.split('/')[1]
+    reconstruction_multiple(model, dataloaders.test_loader, time, 'test', 30, C.image_dim)
 
 
 if __name__ == '__main__':
     main()
-    # test('output/2023-02-15~15:17:27/model')
+    # test('output/2023-03-30~16:08:15/model')
 

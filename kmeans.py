@@ -8,9 +8,7 @@ import pandas as pd
 import pickle as pk
 from tqdm import tqdm
 from sklearn.cluster import KMeans
-from sklearn.cluster import MiniBatchKMeans
 from sklearn.manifold import TSNE
-from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 
 from model import Autoencoder
@@ -20,9 +18,9 @@ from constant import CONSTANT
 C = CONSTANT()
 
 class Kmeans():
-    def __init__(self):
+    def __init__(self, path):
         self.reset_folder()
-        self.setup()
+        self.setup(path)
         self.pass_model()
 
     def reset_folder(self):
@@ -32,14 +30,14 @@ class Kmeans():
                 shutil.rmtree(i)
             os.mkdir(i)
 
-    def setup(self):
-        path = 'output/2023-02-23~11:44:24/model'
+    def setup(self, path):
         model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
         model.load_state_dict(torch.load(path))
         self.model = model.to(C.device)
         self.dataloaders = MyDataloader()
         self.img_name = self.dataloaders.setup_kmeans()
-        self.kmeans_vector = np.zeros((len(self.img_name),32))
+        self.kmeans_vector = np.zeros((len(self.img_name),C.latent_size))
+        self.truth = np.zeros((len(self.img_name)))
         # print(img_name[0])
         print(self.kmeans_vector.shape)
 
@@ -50,13 +48,14 @@ class Kmeans():
             latent = self.model.encoder(x)
             # print(latent.shape)
             self.kmeans_vector[C.bs*cnt:C.bs*(cnt+1),:] = latent.cpu().detach().numpy()
-        # print(kmeans_vector)
+            self.truth[C.bs*cnt:C.bs*(cnt+1)] = np.array(y)
         print('Passed Autoencoder Model.')
+        # print(self.truth)
+        # print(self.img_name)
 
     def pass_kmeans(self, K):
         self.K = K
         self.kmeans = KMeans(n_clusters=K, random_state=0, n_init=10)
-        # self.kmeans = MiniBatchKMeans(n_clusters=K, random_state=0, n_init=10, batch_size=20480)
         self.kmeans.fit(self.kmeans_vector)
         # print(kmeans_vector[0])
         # print(kmeans.labels_[:10])
@@ -82,30 +81,22 @@ class Kmeans():
         result = self.model.decoder(torch.tensor(cluster_center,dtype=torch.float).to(C.device))
         # print(result.shape)
         for i in range(self.K):
-            # print(result[i].shape)
-            reconstructed = (result.cpu().detach().numpy()[i].reshape((64,64)))*255
+            reconstructed = (result.cpu().detach().numpy()[i].reshape((C.image_dim,C.image_dim)))*255
             cv2.imwrite('output/k-center/cluster_%d.png'%i,reconstructed)
 
     def reconstruct_real_center(self):
         def find_medoids(X, labels):
             """
-            根據k-means算法的結果找到每個聚類的medoid
-            :param X: 樣本數據，以numpy array表示
-            :param labels: k-means算法的結果，即每個樣本所屬的聚類
-            :return: 每個聚類的medoid
+            Find the medoid of each cluster based on the pairwise distance between points.
+            :param X: numpy array of shape (n_samples, n_features) representing the data
+            :param labels: numpy array of shape (n_samples,) representing the cluster labels
+            :return: numpy array of shape (n_clusters,) representing the indices of the medoids
             """
             medoids = []
-            # D = squareform(pdist(X))
-            # for label in sorted(set(labels)):
-            #     indices = np.where(labels == label)[0]
-            #     distances = np.sum(D[indices][:, indices], axis=1)
-            #     medoid_index = indices[np.argmin(distances)]
-            #     medoids.append(medoid_index)
-            for label in sorted(set(labels)):
+            for label in np.unique(labels):
                 indices = np.where(labels == label)[0]
-                distances = cdist(X[indices], X[indices])
-                min_distances = np.min(distances, axis=1)
-                medoid_index = indices[np.argmin(min_distances)]
+                distances = np.sum(np.abs(X[np.newaxis, indices, :] - X[indices, np.newaxis, :]), axis=2)
+                medoid_index = indices[np.argmin(np.sum(distances, axis=1))]
                 medoids.append(medoid_index)
             return np.array(medoids)
         medoids = find_medoids(self.kmeans_vector,self.kmeans.labels_)
@@ -116,14 +107,12 @@ class Kmeans():
     def cluster_sample(self, nob):
         for i in range(self.K): # for each cluster
             cnt = 0
-            all_img = np.zeros((64*(nob//10),640,3))
-            for j in range(nob):
-                while self.kmeans.labels_[cnt] != i:
-                    cnt += 1
-                    continue
-                img = cv2.resize(cv2.imread(self.img_name[cnt]),(64,64), interpolation=cv2.INTER_NEAREST)
-                all_img[(j//10)*64:(j//10+1)*64,(j%10)*64:(j%10+1)*64,:] = img
-                cnt += 1
+            all_img = np.zeros((C.image_dim*(nob//10),C.image_dim*10,3))
+            indexes = [j for j in range(len(self.kmeans.labels_)) if self.kmeans.labels_[j] == i]
+            indexes = random.sample(indexes, nob)
+            for j,cnt in enumerate(indexes):
+                img = cv2.imread(self.img_name[cnt])
+                all_img[(j//10)*C.image_dim:(j//10+1)*C.image_dim,(j%10)*C.image_dim:(j%10+1)*C.image_dim,:] = img
             cv2.imwrite('output/k-example/cluster_%d.png'%i,all_img)
     
     def tsne_plot(self):
@@ -132,7 +121,7 @@ class Kmeans():
             return
         # TSNE dimension reduction
         print('TSNE started!')
-        tsne_vector = TSNE(n_components=2, learning_rate='auto',init='random', perplexity=50).fit_transform(self.kmeans_vector)
+        tsne_vector = TSNE(n_components=2, learning_rate='auto',init='random', perplexity=1000).fit_transform(self.kmeans_vector)
         print('TSNE Done!')
         # print(tsne_vector.shape)
         cmap = plt.get_cmap('tab20')
@@ -151,12 +140,13 @@ class Kmeans():
             pk.dump(dict_pk,f)
 
 if __name__ == '__main__':
-    kmeans = Kmeans()
+    path = 'output/2023-03-30~17:27:18/model'
+    kmeans = Kmeans(path)
     # kmeans.elbow(range(2,40,2))
     kmeans.pass_kmeans(K = 10)
     kmeans.reconstruct_cluster_center()
     kmeans.reconstruct_real_center()
-    kmeans.cluster_sample(50)
-    # kmeans.tsne_plot()
+    kmeans.cluster_sample(300)
+    kmeans.tsne_plot()
     kmeans.dump_result()
     
