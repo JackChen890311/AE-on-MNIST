@@ -48,7 +48,7 @@ class MyDataloader():
         self.train_loader = self.loader_prepare(self.train_dataset, True)
         del self.train_dataset
 
-        self.valid_dataset = MyDataset(self.C.data_path)
+        self.valid_dataset = MyDataset(self.C.data_path_test)
         self.valid_loader = self.loader_prepare(self.valid_dataset, True)
         del self.valid_dataset
         print('Preparation Done!')

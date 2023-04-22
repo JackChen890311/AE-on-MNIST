@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-from model import Autoencoder
+from model import Autoencoder, VariationalAutoencoder
 from dataloader import MyDataloader
 from constant import CONSTANT
 
@@ -25,7 +25,7 @@ class Kmeans():
             if os.path.exists(path+i):
                 shutil.rmtree(path+i)
             os.mkdir(path+i)
-        model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
+        model = VariationalAutoencoder(C.in_size, C.latent_size, C.hidden_dims)
         model.load_state_dict(torch.load(path+'/model'))
         self.model = model.to(C.device)
         self.dataloaders = MyDataloader()
@@ -134,14 +134,13 @@ class Kmeans():
             pk.dump(dict_pk,f)
 
 if __name__ == '__main__':
-    path = 'output/2023-03-30~22:14:50'
+    path = 'output/2023-04-04~22:15:10'
     kmeans = Kmeans(path)
     kmeans.pass_model()
     # kmeans.elbow(range(2,40,2))
     kmeans.pass_kmeans(K = 10)
+    kmeans.dump_result()
     kmeans.reconstruct_cluster_center()
     kmeans.reconstruct_real_center()
-    kmeans.cluster_sample(300)
-    # kmeans.tsne_plot()
-    kmeans.dump_result()
-    
+    kmeans.cluster_sample(500)
+    kmeans.tsne_plot()

@@ -18,6 +18,6 @@ class CONSTANT():
         self.hidden_dims = [392, 196, 98]
         self.image_dim = 28
         self.in_size = 784
-        self.latent_size = 16
+        self.latent_size = 32
 
         
