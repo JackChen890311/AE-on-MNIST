@@ -98,7 +98,7 @@ def main():
         scheduler.step()
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
-        print(f'Epoch = {e}, Train / Valid Loss = {train_loss} / {valid_loss}')
+        print(f'Epoch = {e}, Train / Valid Loss = {round(train_loss,6)} / {round(valid_loss,6)}')
         if e % 10 == 0:
             reconstruction(model, dataloaders.valid_loader, e, start_time, img_dim)
 
@@ -131,12 +131,12 @@ def main():
         with open('output/%s/losses.pickle'%start_time, 'wb') as file:
             pk.dump([train_losses, valid_losses, best_valid_loss], file)
         
-    print(f'Ending at epoch {e}. Best valid loss: {best_valid_loss}')
+    print(f'Ending at epoch {e}. Best valid loss: {round(best_valid_loss,6)}')
     with open('output/%s/pata.txt'%start_time, 'a') as f:
-        f.write(f"Ending at epoch {e}. Best valid loss: {best_valid_loss}\n")
+        f.write(f"Ending at epoch {e}. Best valid loss: {round(best_valid_loss,6)}\n")
 
 def test_model(path):
-    model = Autoencoder(C.in_size, C.latent_size, C.hidden_dims)
+    model = VariationalAutoencoder(C.in_size, C.latent_size, C.hidden_dims)
     model.load_state_dict(torch.load(path))
     model = model.to(C.device)
     model.eval()

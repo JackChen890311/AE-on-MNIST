@@ -9,6 +9,7 @@ import pickle as pk
 from tqdm import tqdm
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
 from model import Autoencoder, VariationalAutoencoder
@@ -54,7 +55,14 @@ class Kmeans():
         # print(kmeans_vector[0])
         # print(kmeans.labels_[:10])
         # print(kmeans.cluster_centers_[0])
-    
+
+
+    def pass_pca(self):
+        pca = PCA(n_components=2)
+        self.pc = pca.fit_transform(self.kmeans_vector)
+        print(self.pc.shape)
+
+
     def elbow(self, Ks):
         sse = {}
         for k in tqdm(Ks):
@@ -139,6 +147,7 @@ if __name__ == '__main__':
     kmeans.pass_model()
     # kmeans.elbow(range(2,40,2))
     kmeans.pass_kmeans(K = 10)
+    # kmeans.pass_pca()
     kmeans.dump_result()
     kmeans.reconstruct_cluster_center()
     kmeans.reconstruct_real_center()
